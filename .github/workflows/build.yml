@@ -11,7 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -22,19 +22,30 @@ jobs:
         with:
           ndk-version: r26b
 
-      - name: Build
+      - name: Build with ndk-build
         env:
-          NDK_CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+          NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
         run: |
-          mkdir -p build
-          chmod +x build.sh
-          bash build.sh
+          cd src/jni
+          $NDK_HOME/ndk-build -j$(nproc) APP_PLATFORM=android-26 APP_ABI=arm64-v8a NDK_LIBS_OUT=../../build NDK_OUT=../../build/obj
+          ls -la ../../build/*/panxcz_subway 2>/dev/null || ls -la ../../build/
 
-      - name: Upload artifacts
+      - name: Find and upload binary
+        run: |
+          BINARY=$(find build -name "panxcz_subway" -type f | head -1)
+          if [ -z "$BINARY" ]; then
+            echo "Binary not found!"
+            find build -type f | head -20
+            exit 1
+          fi
+          echo "Found: $BINARY"
+          file "$BINARY"
+          cp "$BINARY" build/panxcz_subway
+          chmod 755 build/panxcz_subway
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: panxcz-subway
-          path: |
-            build/subway_tool
-            build/liboverlay.so
+          path: build/panxcz_subway
           retention-days: 90
