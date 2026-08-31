@@ -187,7 +187,7 @@ void ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data) {
                 );
 
                 // Bind texture
-                glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)cmd.GetTexID());
+                glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)cmd.TextureId);
 
                 // Draw
                 glDrawElements(GL_TRIANGLES, (GLsizei)cmd.ElemCount,
