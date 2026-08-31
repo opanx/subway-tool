@@ -29,7 +29,7 @@ echo "Compiler: $CC"
 $CC --version | head -1
 
 # Flags
-CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function"
+CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -std=c++17"
 CFLAGS="$CFLAGS -DANDROID -DIMGUI_IMPL_ANDROID -DIMGUI_IMPL_OPENGL_ES3"
 INCLUDES="-Isrc -Isrc/imgui"
 
