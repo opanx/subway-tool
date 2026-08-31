@@ -7,14 +7,12 @@
 
 static ImGui_ImplAndroid_Data* g_Data = nullptr;
 
-bool ImGui_ImplAndroid_Init(struct android_app* app) {
+bool ImGui_ImplAndroid_Init(void* /*app*/) {
     g_Data = IM_NEW(ImGui_ImplAndroid_Data)();
-    g_Data->app = app;
     g_Data->action = 0;
     g_Data->pointCount = 0;
     ImGuiIO& io = ImGui::GetIO();
     io.MouseDrawCursor = true;
-    io.PlatformName = "Android";
     return true;
 }
 
