@@ -1,95 +1,50 @@
 #!/bin/bash
-# Panxcz Subway Surfers Tool v2.1 - Build Script
+# Panxcz Subway Tool v2.1 - Build Script
+# Builds: injector (ELF) + liboverlay.so
 
 set -e
 
-# NDK
 if [ -n "$NDK_CC" ]; then
     CC="$NDK_CC"
-    TOOLCHAIN_DIR=$(dirname "$CC")
-    STRIP="${TOOLCHAIN_DIR}/llvm-strip"
+    TC=$(dirname "$CC")
+    STRIP="${TC}/llvm-strip"
+    TARGET=android-33
 else
     ANDROID_NDK="${ANDROID_NDK_HOME:-$HOME/android-ndk-r26b}"
     TC="${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64"
     CC="${TC}/bin/aarch64-linux-android33-clang"
     STRIP="${TC}/bin/llvm-strip"
+    TARGET=android-33
 fi
 
-echo "Compiler: $CC"
-$CC --version | head -1
+CFLAGS="-O2 -Wall -Wno-unused-parameter"
+CFLAGS_CPP="$CFLAGS -std=c++17 -DIMGUI_IMPL_OPENGL_ES3"
+INCLUDES="-Isrc/imgui -Isrc/overlay"
 
-CFLAGS_C="-O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -DANDROID"
-CFLAGS_CPP="-O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -std=c++17 -DANDROID -DIMGUI_IMPL_ANDROID -DIMGUI_IMPL_OPENGL_ES3"
-INCLUDES="-Isrc -Isrc/imgui"
+echo "=== Building liboverlay.so (injected into game) ==="
+$CC $CFLAGS_CPP $INCLUDES -shared -fPIC \
+    -o build/liboverlay.so \
+    src/imgui/imgui.cpp \
+    src/imgui/imgui_draw.cpp \
+    src/imgui/imgui_widgets.cpp \
+    src/imgui/imgui_tables.cpp \
+    src/imgui_impl_opengl3.cpp \
+    src/overlay/overlay.cpp \
+    -lEGL -lGLESv3 -llog -landroid -lc++ -lm
 
-mkdir -p build/obj release
-
-echo "=== Compiling ImGui core (C++) ==="
-for f in imgui.cpp imgui_draw.cpp imgui_widgets.cpp imgui_tables.cpp; do
-    echo "  $f"
-    $CC $CFLAGS_CPP $INCLUDES -c "src/imgui/$f" -o "build/obj/${f%.cpp}.o" || exit 1
-done
-
-echo "=== Compiling Android backend (C++) ==="
-$CC $CFLAGS_CPP $INCLUDES -c src/imgui_impl_android.cpp -o build/obj/imgui_impl_android.o
-
-echo "=== Compiling OpenGL3 backend (C++) ==="
-$CC $CFLAGS_CPP $INCLUDES -c src/imgui_impl_opengl3.cpp -o build/obj/imgui_impl_opengl3.o
-
-echo "=== Compiling cheat engine (C++) ==="
-$CC $CFLAGS_CPP $INCLUDES -c src/subway_cheat.cpp -o build/obj/subway_cheat.o
-
-echo "=== Linking ==="
-$CC \
-    build/obj/*.o \
-    -lEGL -lGLESv3 -llog -landroid -ldl \
-    -lc++ -lm \
-    -o build/subway_tool
+echo "=== Building injector (standalone ELF) ==="
+$CC $CFLAGS -DANDROID \
+    -o build/subway_tool \
+    src/injector/injector.cpp \
+    -llog
 
 chmod +x build/subway_tool
+chmod 755 build/liboverlay.so
 
-# Strip
-if [ -f "$STRIP" ]; then
-    $STRIP --strip-all build/subway_tool
-fi
-
-SIZE=$(du -h build/subway_tool | cut -f1)
-echo "Built: build/subway_tool ($SIZE)"
-
-# Create wrapper .sh (expects binary in same dir)
-cat > release/subway_tool.sh << 'EOF'
-#!/system/bin/sh
-# 🎮 Panxcz Subway Surfers Tool v2.1
-# By Panxcz & Freebuff
-# 3-finger tap = toggle overlay menu
-
-BASEDIR=$(cd "$(dirname "$0")" && pwd)
-BIN="$BASEDIR/subway_tool"
-
-if [ ! -f "$BIN" ]; then
-    echo "[!] Binary not found: $BIN"
-    echo "[!] Download subway_tool binary first"
-    exit 1
-fi
-
-if [ "$(id -u)" != "0" ]; then
-    echo "[!] Need root: su -c sh $0"
-    exit 1
-fi
-
-chmod 777 "$BIN"
-echo "[*] Starting Panxcz Subway Tool v2.1..."
-echo "[*] 3-finger tap = toggle overlay"
-exec "$BIN" "$@"
-EOF
-
-chmod +x release/subway_tool.sh
+$STRIP --strip-all build/subway_tool 2>/dev/null || true
+$STRIP --strip-all build/liboverlay.so 2>/dev/null || true
 
 echo ""
 echo "=== Build Complete ==="
-echo "Binary:  build/subway_tool ($SIZE)"
-echo "Wrapper: release/subway_tool.sh"
-echo ""
-echo "Test:"
-echo "  adb push build/subway_tool release/subway_tool.sh /data/local/tmp/"
-echo "  adb shell su -c sh /data/local/tmp/subway_tool.sh"
+echo "Injector: build/subway_tool ($(du -h build/subway_tool | cut -f1))"
+echo "Overlay:  build/liboverlay.so ($(du -h build/liboverlay.so | cut -f1))"

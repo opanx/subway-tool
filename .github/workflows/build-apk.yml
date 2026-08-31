@@ -1,0 +1,55 @@
+name: Build Overlay APK
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'overlay_app/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Debug APK
+        working-directory: overlay_app
+        run: |
+          chmod +x gradlew 2>/dev/null || true
+          # Create gradle wrapper if missing
+          if [ ! -f gradlew ]; then
+            gradle wrapper --gradle-version 8.2
+          fi
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Build Release APK
+        working-directory: overlay_app
+        run: ./gradlew assembleRelease 2>/dev/null || echo "Release build failed, using debug"
+
+      - name: Find APK
+        id: find-apk
+        run: |
+          APK=$(find overlay_app -name "*.apk" -type f | head -1)
+          echo "apk=$APK" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK"
+          ls -la "$APK" 2>/dev/null
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: panxcz-subway-apk
+          path: ${{ steps.find-apk.outputs.apk }}
+          retention-days: 90
