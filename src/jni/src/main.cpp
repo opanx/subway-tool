@@ -345,24 +345,11 @@ int main(int argc, char *argv[]) {
 
     ImGui::GetStyle().WindowRounding = 25.0f;
 
-    /* CRM scan runs in background thread */
-    pthread_t crmThread;
-    pthread_create(&crmThread, NULL, [](void*)->void* {
-        printf("[*] CRM scanner started\n");
-        while (main_thread_flag) {
-            if (!g_CRM) {
-                uintptr_t c = FindCRM();
-                if (c) {
-                    g_CRM = c;
-                    printf("[+] CRM found @ 0x%lx\n", c);
-                } else {
-                    printf("[!] CRM not found - start a run\n");
-                }
-            }
-            sleep(3);
-        }
-        return NULL;
-    }, NULL);
+    /* CRM scan in background - only when game is in a run */
+    static bool crmScanning = false;
+    static int crmScanFrame = 0;
+
+    printf("[+] Main loop started\n\n");
 
     printf("[+] Main loop started\n\n");
 
@@ -372,13 +359,33 @@ int main(int argc, char *argv[]) {
             if (libbase == 0) { usleep(500000); continue; }
         }
 
+        /* Only scan CRM if not found yet - but don't block render */
+        if (!g_CRM && !crmScanning) {
+            /* Start scan in separate thread */
+            crmScanning = true;
+            pthread_t t;
+            pthread_create(&t, NULL, [](void*)->void* {
+                printf("[*] Scanning for CRM...\n");
+                uintptr_t c = FindCRM();
+                if (c) {
+                    g_CRM = c;
+                    printf("[+] CRM found @ 0x%lx\n", c);
+                } else {
+                    printf("[!] CRM not found - start a run\n");
+                }
+                crmScanning = false;
+                return NULL;
+            }, NULL);
+            pthread_detach(t);
+        }
+
         ApplyCheats();
 
         drawBegin();
         Layout_tick_UI();
         drawEnd();
 
-        usleep(1000);
+        usleep(16000); /* ~60fps */
     }
 
     shutdown();
