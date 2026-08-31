@@ -1,8 +1,6 @@
 /*
  * Panxcz Subway Surfers Tool v2.1
- * Standalone ELF with ImGui overlay (same approach as SRC-MLBB-NUSANTARA)
- * Uses ANativeWindowCreator for floating overlay window
- *
+ * Standalone ELF with ImGui overlay
  * Copyright (c) 2025 Panxcz & Freebuff
  */
 
@@ -32,34 +30,27 @@ bool main_thread_flag = true;
 int abs_ScreenX = 0;
 int abs_ScreenY = 0;
 long libbase = 0;
-int g_pid = 0;
 
 /* ============================================================
  * Subway Surfers Offsets (from dump.cs)
  * ============================================================ */
-
-/* CoreRunnerManager */
 #define OFF_CRM_IS_ACTIVE       0x10
 #define OFF_CRM_SESSION_DATA    0x18
 #define OFF_CRM_RUN_MULTIPLIER  0x20
 
-/* RunSessionData */
 #define OFF_RSD_DISTANCE        0x18
 #define OFF_RSD_KEYS            0x20
 #define OFF_RSD_COINS           0x28
 #define OFF_RSD_TOTAL_TIME      0x30
 #define OFF_RSD_BONUS_COINS     0x48
 #define OFF_RSD_MULTIPLIER_USED 0x4c
-#define OFF_RSD_POINTS          0x50
 
-/* CoreRunMultiplier */
 #define OFF_CRMUL_BOOSTER       0x10
 #define OFF_CRMUL_MYSTERY       0x14
 #define OFF_CRMUL_EVENT         0x18
 #define OFF_CRMUL_DOUBLE_SCORE  0x1c
 #define OFF_CRMUL_TOTAL         0x20
 
-/* CharacterMotorConfig */
 #define OFF_CMC_GRAVITY         0x18
 #define OFF_CMC_JUMP_HEIGHT     0x4c
 #define OFF_CMC_COLLIDER_H      0x64
@@ -67,10 +58,8 @@ int g_pid = 0;
 /* ============================================================
  * Cheat Variables
  * ============================================================ */
-static int g_BattleManager = 0; /* Using same name for compatibility */
-static uintptr_t g_CRM = 0;    /* CoreRunnerManager address */
+static uintptr_t g_CRM = 0;
 
-/* Cheats */
 static int scoreMult = 1;
 static int coinMult = 1;
 static float speedHack = 1.0f;
@@ -131,33 +120,28 @@ static uintptr_t FindCRM() {
     printf("[+] Found %zu rw regions\n", rwRegions.size());
 
     for (auto &region : rwRegions) {
-        uintptr_t regionSize = region.end - region.start;
-
         for (uintptr_t addr = region.start; addr < region.end - 0x100; addr += 8) {
             uintptr_t ptr = 0;
-            if (!pvm((void*)addr, &ptr, 8, false)) continue;
+            if (!ProcessRead((void*)addr, &ptr, 8)) continue;
             if (ptr < 0x10000 || ptr > 0x7FFFFFFFFFFF) continue;
 
-            /* Validate CRM: +0x18 = RunSessionData*, +0x20 = CoreRunMultiplier* */
             uintptr_t rsd = 0;
-            if (!pvm((void*)(ptr + OFF_CRM_SESSION_DATA), &rsd, 8, false)) continue;
+            if (!ProcessRead((void*)(ptr + OFF_CRM_SESSION_DATA), &rsd, 8)) continue;
             if (rsd < 0x10000 || rsd > 0x7FFFFFFFFFFF) continue;
 
             uintptr_t crmul = 0;
-            if (!pvm((void*)(ptr + OFF_CRM_RUN_MULTIPLIER), &crmul, 8, false)) continue;
+            if (!ProcessRead((void*)(ptr + OFF_CRM_RUN_MULTIPLIER), &crmul, 8)) continue;
             if (crmul < 0x10000 || crmul > 0x7FFFFFFFFFFF) continue;
 
-            /* Verify RunSessionData: TotalTime at +0x30 */
             float tt = 0;
-            if (!pvm((void*)(rsd + OFF_RSD_TOTAL_TIME), &tt, 4, false)) continue;
+            if (!ProcessRead((void*)(rsd + OFF_RSD_TOTAL_TIME), &tt, 4)) continue;
             if (tt <= 0.0f || tt > 100000.0f) continue;
 
-            /* Verify CoreRunMultiplier: total at +0x20 */
             int tm = 0;
-            if (!pvm((void*)(crmul + OFF_CRMUL_TOTAL), &tm, 4, false)) continue;
+            if (!ProcessRead((void*)(crmul + OFF_CRMUL_TOTAL), &tm, 4)) continue;
             if (tm < 1 || tm > 100) continue;
 
-            printf("[+] FOUND CoreRunnerManager @ 0x%lx (Time=%.1f, Mult=%d)\n", ptr, tt, tm);
+            printf("[+] FOUND CRM @ 0x%lx (Time=%.1f, Mult=%d)\n", ptr, tt, tm);
             result = ptr;
             break;
         }
@@ -173,53 +157,48 @@ static void ApplyCheats() {
     if (!g_CRM) return;
 
     uintptr_t mp = 0;
-    if (!pvm((void*)(g_CRM + OFF_CRM_RUN_MULTIPLIER), &mp, 8, false) || mp < 0x10000) return;
+    if (!ProcessRead((void*)(g_CRM + OFF_CRM_RUN_MULTIPLIER), &mp, 8) || mp < 0x10000) return;
 
     uintptr_t sp = 0;
-    if (!pvm((void*)(g_CRM + OFF_CRM_SESSION_DATA), &sp, 8, false) || sp < 0x10000) return;
+    if (!ProcessRead((void*)(g_CRM + OFF_CRM_SESSION_DATA), &sp, 8) || sp < 0x10000) return;
 
-    /* Score multiplier */
     if (scoreMult > 1) {
         int v = scoreMult;
-        wvm((void*)(mp + OFF_CRMUL_BOOSTER), &v, 4);
-        wvm((void*)(mp + OFF_CRMUL_TOTAL), &v, 4);
+        ProcessWrite((void*)(mp + OFF_CRMUL_BOOSTER), &v, 4);
+        ProcessWrite((void*)(mp + OFF_CRMUL_TOTAL), &v, 4);
         int one = 1;
-        wvm((void*)(mp + OFF_CRMUL_DOUBLE_SCORE), &one, 4);
+        ProcessWrite((void*)(mp + OFF_CRMUL_DOUBLE_SCORE), &one, 4);
     }
 
-    /* Coin multiplier */
     if (coinMult > 1) {
         int v = coinMult * 100;
-        wvm((void*)(sp + OFF_RSD_BONUS_COINS), &v, 4);
-        wvm((void*)(sp + OFF_RSD_MULTIPLIER_USED), &coinMult, 4);
+        ProcessWrite((void*)(sp + OFF_RSD_BONUS_COINS), &v, 4);
+        ProcessWrite((void*)(sp + OFF_RSD_MULTIPLIER_USED), &coinMult, 4);
     }
 
-    /* Infinite coins */
     if (infiniteCoins) {
         int max = 999999;
-        wvm((void*)(sp + OFF_RSD_COINS), &max, 4);
-        wvm((void*)(sp + OFF_RSD_BONUS_COINS), &max, 4);
+        ProcessWrite((void*)(sp + OFF_RSD_COINS), &max, 4);
+        ProcessWrite((void*)(sp + OFF_RSD_BONUS_COINS), &max, 4);
     }
 
-    /* Double coins */
     if (doubleCoins) {
         int one = 1;
-        wvm((void*)(mp + OFF_CRMUL_DOUBLE_SCORE), &one, 4);
+        ProcessWrite((void*)(mp + OFF_CRMUL_DOUBLE_SCORE), &one, 4);
     }
 
-    /* Speed hack */
     if (speedHack > 1.0f) {
         int v = (int)(speedHack * 10);
-        wvm((void*)(mp + OFF_CRMUL_EVENT), &v, 4);
+        ProcessWrite((void*)(mp + OFF_CRMUL_EVENT), &v, 4);
     }
 
     /* Read game data */
-    pvm((void*)(sp + OFF_RSD_COINS), &g_GameData.coins, 4, false);
-    pvm((void*)(sp + OFF_RSD_KEYS), &g_GameData.keys, 4, false);
-    pvm((void*)(sp + OFF_RSD_DISTANCE), &g_GameData.distance, 4, false);
-    pvm((void*)(mp + OFF_CRMUL_TOTAL), &g_GameData.totalMult, 4, false);
+    ProcessRead((void*)(sp + OFF_RSD_COINS), &g_GameData.coins, 4);
+    ProcessRead((void*)(sp + OFF_RSD_KEYS), &g_GameData.keys, 4);
+    ProcessRead((void*)(sp + OFF_RSD_DISTANCE), &g_GameData.distance, 4);
+    ProcessRead((void*)(mp + OFF_CRMUL_TOTAL), &g_GameData.totalMult, 4);
     uint8_t active = 0;
-    pvm((void*)(g_CRM + OFF_CRM_IS_ACTIVE), &active, 1, false);
+    ProcessRead((void*)(g_CRM + OFF_CRM_IS_ACTIVE), &active, 1);
     g_GameData.isActive = active;
 }
 
@@ -237,7 +216,6 @@ static void Layout_tick_UI() {
     ImGui::TextColored(ImVec4(0, 0.9f, 1, 1), "By Panxcz & Freebuff");
     ImGui::Separator();
 
-    /* Status */
     if (g_GameData.isActive) {
         ImGui::TextColored(ImVec4(0, 1, 0.5f, 1), "IN RUN");
         ImGui::Text("Coins: %d | Keys: %d", g_GameData.coins, g_GameData.keys);
@@ -321,14 +299,13 @@ static void Layout_tick_UI() {
 
     ImGui::End();
 
-    /* Re-find CRM if invalid */
-    if (g_CRM && !g_GameData.isActive) {
-        /* Not in a run - try to re-find */
-        static int waitCounter = 0;
-        if (++waitCounter > 300) {
-            waitCounter = 0;
-            uintptr_t newCrm = FindCRM();
-            if (newCrm) g_CRM = newCrm;
+    /* Re-find CRM periodically */
+    if (!g_GameData.isActive) {
+        static int wait = 0;
+        if (++wait > 300) {
+            wait = 0;
+            uintptr_t c = FindCRM();
+            if (c) g_CRM = c;
         }
     }
 }
@@ -343,16 +320,15 @@ int main(int argc, char *argv[]) {
     printf("  By Panxcz & Freebuff\n");
     printf("  ========================================\n\n");
 
-    /* Find game */
     printf("[*] Searching for com.kiloo.subwaysurf...\n");
     g_pid = pidof("com.kiloo.subwaysurf");
     if (g_pid <= 0) {
-        printf("[-] Game not found! Start Subway Surfers first.\n");
+        printf("[-] Game not found!\n");
         return 1;
     }
+    Memory::g_pid = g_pid;
     printf("[+] PID: %d\n", g_pid);
 
-    /* Find lib base */
     libbase = GetBase("libil2cpp.so");
     if (libbase == 0) {
         printf("[-] libil2cpp.so not found!\n");
@@ -360,50 +336,36 @@ int main(int argc, char *argv[]) {
     }
     printf("[+] libil2cpp.so: 0x%lx\n", libbase);
 
-    /* Screen config */
     screen_config();
     abs_ScreenX = (displayInfo.height > displayInfo.width ? displayInfo.height : displayInfo.width);
     abs_ScreenY = (displayInfo.height < displayInfo.width ? displayInfo.height : displayInfo.width);
     printf("[+] Screen: %dx%d\n", abs_ScreenX, abs_ScreenY);
 
-    /* Init overlay */
     if (!initGUI_draw(native_window_screen_x, native_window_screen_y, true)) {
-        printf("[-] Failed to init ImGui overlay!\n");
+        printf("[-] Failed to init overlay!\n");
         return 1;
     }
-    printf("[+] ImGui overlay initialized\n");
+    printf("[+] Overlay initialized\n");
 
-    /* Init touch */
     Touch_Init(displayInfo.width, displayInfo.height, displayInfo.orientation, false);
     printf("[+] Touch initialized\n");
 
     ImGui::GetStyle().WindowRounding = 25.0f;
 
-    /* Find CRM */
     g_CRM = FindCRM();
-    if (g_CRM) {
-        printf("[+] CoreRunnerManager found @ 0x%lx\n", g_CRM);
-    } else {
-        printf("[!] CRM not found - start a run in-game\n");
-    }
+    if (g_CRM) printf("[+] CRM found @ 0x%lx\n", g_CRM);
+    else printf("[!] Start a run in-game first\n");
 
-    printf("[+] Starting main loop...\n\n");
+    printf("[+] Main loop started\n\n");
 
-    /* Main loop */
     while (main_thread_flag) {
-        /* Re-find lib if needed */
         if (libbase == 0) {
             libbase = GetBase("libil2cpp.so");
-            if (libbase == 0) {
-                usleep(500000);
-                continue;
-            }
+            if (libbase == 0) { usleep(500000); continue; }
         }
 
-        /* Apply cheats */
         ApplyCheats();
 
-        /* Draw overlay */
         drawBegin();
         Layout_tick_UI();
         drawEnd();
