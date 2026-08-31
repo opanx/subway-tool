@@ -309,7 +309,7 @@ static void patch_anti_root(int pid) {
         if ((end - start) > 0x1000000) continue;
 
         size_t sz = end - start;
-        unsigned char *buf = malloc(sz);
+        unsigned char *buf = (unsigned char*)malloc(sz);
         if (!buf) continue;
 
         if (read_mem(pid, start, buf, sz) == 0) {
@@ -375,7 +375,7 @@ static unsigned long scan_strategy_known(int pid) {
         if ((end - start) > 0x200000) continue;
 
         size_t sz = end - start;
-        unsigned char *buf = malloc(sz);
+        unsigned char *buf = (unsigned char*)malloc(sz);
         if (!buf) continue;
 
         if (read_mem(pid, start, buf, sz) == 0) {
@@ -440,7 +440,7 @@ static unsigned long scan_strategy_libdata(int pid) {
         size_t sz = end - start;
         if (sz > 0x500000) continue;
 
-        unsigned char *buf = malloc(sz);
+        unsigned char *buf = (unsigned char*)malloc(sz);
         if (!buf) continue;
 
         if (read_mem(pid, start, buf, sz) == 0) {
@@ -545,7 +545,7 @@ static void find_and_apply_motor_config(int pid) {
         if ((end - start) > 0x200000) continue;
 
         size_t sz = end - start;
-        unsigned char *buf = malloc(sz);
+        unsigned char *buf = (unsigned char*)malloc(sz);
         if (!buf) continue;
 
         if (read_mem(pid, start, buf, sz) == 0) {
@@ -599,7 +599,7 @@ static void cheat_collision(int pid) {
         if ((end - start) > 0x200000) continue;
 
         size_t sz = end - start;
-        unsigned char *buf = malloc(sz);
+        unsigned char *buf = (unsigned char*)malloc(sz);
         if (!buf) continue;
 
         if (read_mem(pid, start, buf, sz) == 0) {
@@ -653,7 +653,7 @@ static void cheat_powerups(int pid) {
         if ((end - start) > 0x200000) continue;
 
         size_t sz = end - start;
-        unsigned char *buf = malloc(sz);
+        unsigned char *buf = (unsigned char*)malloc(sz);
         if (!buf) continue;
 
         if (read_mem(pid, start, buf, sz) == 0) {
@@ -716,7 +716,7 @@ static void cheat_magnet(int pid) {
         if ((end - start) > 0x100000) continue;
 
         size_t sz = end - start;
-        unsigned char *buf = malloc(sz);
+        unsigned char *buf = (unsigned char*)malloc(sz);
         if (!buf) continue;
 
         if (read_mem(pid, start, buf, sz) == 0) {
@@ -783,7 +783,7 @@ static void cheat_no_ads(int pid) {
         if ((end - start) > 0x1000000) continue;
 
         size_t sz = end - start;
-        unsigned char *buf = malloc(sz);
+        unsigned char *buf = (unsigned char*)malloc(sz);
         if (!buf) continue;
 
         if (read_mem(pid, start, buf, sz) == 0) {
@@ -794,7 +794,7 @@ static void cheat_no_ads(int pid) {
                 NULL
             };
             for (int i = 0; ad_strings[i]; i++) {
-                unsigned char *match = memmem(buf, sz, ad_strings[i], strlen(ad_strings[i]));
+                unsigned char *match = (unsigned char*)memmem(buf, sz, ad_strings[i], strlen(ad_strings[i]));
                 if (match) {
                     unsigned long addr = start + (match - buf);
                     printf(C_GRAY "    [ad] Found '%s' @ 0x%lx\n" C_RESET, ad_strings[i], addr);

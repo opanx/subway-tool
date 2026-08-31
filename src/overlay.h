@@ -130,7 +130,6 @@ static void RenderMenu() {
 
     if (ImGui::Begin("##PanxczMenu", &g_MenuVisible, flags)) {
         // Header
-        ImGui::PushFont(ImGui::GetDefaultFont());
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.0f, 0.9f, 1.0f, 1.0f));
         ImGui::Text("🎮 Panxcz Subway Tool v2.1");
         ImGui::PopStyleColor();
