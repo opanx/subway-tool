@@ -1090,6 +1090,47 @@ static void *input_thread(void *arg) {
 }
 
 /* ============================================================
+ * EXPORT: Apply all cheats (called from overlay thread)
+ * ============================================================ */
+#include "overlay.h"
+
+void apply_all_cheats(CheatSettings* settings) {
+    /* Sync settings from overlay to global */
+    g.score_mult = settings->score_mult;
+    g.coin_mult = settings->coin_mult;
+    g.speed_hack = settings->speed_hack;
+    g.jump_hack = settings->jump_hack;
+    g.gravity_hack = settings->gravity_hack;
+    g.no_collision = settings->no_collision;
+    g.infinite_coins = settings->infinite_coins;
+    g.double_coins = settings->double_coins;
+    g.magnet_range = settings->magnet_range;
+    g.infinite_hoverboard = settings->infinite_hoverboard;
+    g.jetpack_always = settings->jetpack_always;
+    g.invincible = settings->invincible;
+    g.shield = settings->shield;
+    g.god_mode = settings->god_mode;
+    g.score_protect = settings->score_protect;
+    g.double_jump = settings->double_jump;
+    g.fast_landing = settings->fast_landing;
+    g.no_ads = settings->no_ads;
+
+    /* Apply if game is running */
+    if (g_pid > 0 && g_crm_addr > 0) {
+        cheat_score_mult(g_pid, g_crm_addr);
+        cheat_coin_mult(g_pid, g_crm_addr);
+        cheat_infinite_coins(g_pid, g_crm_addr);
+        cheat_double_coins(g_pid, g_crm_addr);
+        cheat_speed(g_pid, g_crm_addr);
+        find_and_apply_motor_config(g_pid);
+        cheat_collision(g_pid);
+        cheat_powerups(g_pid);
+        cheat_magnet(g_pid);
+        cheat_score_protect(g_pid, g_crm_addr);
+    }
+}
+
+/* ============================================================
  * MAIN
  * ============================================================ */
 int main(int argc, char *argv[]) {
