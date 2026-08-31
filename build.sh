@@ -1,42 +1,30 @@
 #!/bin/bash
 # Panxcz Subway Surfers Tool v2.1 - Build Script
-# Compiles ImGui + EGL overlay + cheat engine into single ELF
-# Output: subway_tool.sh (self-contained)
 
 set -e
 
 # NDK
 if [ -n "$NDK_CC" ]; then
     CC="$NDK_CC"
-    # Derive other tools from CC path
     TOOLCHAIN_DIR=$(dirname "$CC")
-    AR="${TOOLCHAIN_DIR}/llvm-ar"
     STRIP="${TOOLCHAIN_DIR}/llvm-strip"
 else
     ANDROID_NDK="${ANDROID_NDK_HOME:-$HOME/android-ndk-r26b}"
     TC="${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64"
     CC="${TC}/bin/aarch64-linux-android33-clang"
-    AR="${TC}/bin/llvm-ar"
     STRIP="${TC}/bin/llvm-strip"
-fi
-
-if [ ! -f "$CC" ]; then
-    echo "ERROR: NDK not found at $CC"
-    exit 1
 fi
 
 echo "Compiler: $CC"
 $CC --version | head -1
 
-# Flags
 CFLAGS_C="-O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -DANDROID"
 CFLAGS_CPP="-O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -std=c++17 -DANDROID -DIMGUI_IMPL_ANDROID -DIMGUI_IMPL_OPENGL_ES3"
 INCLUDES="-Isrc -Isrc/imgui"
 
-mkdir -p build build/obj release
+mkdir -p build/obj release
 
 echo "=== Compiling ImGui core (C++) ==="
-
 for f in imgui.cpp imgui_draw.cpp imgui_widgets.cpp imgui_tables.cpp; do
     echo "  $f"
     $CC $CFLAGS_CPP $INCLUDES -c "src/imgui/$f" -o "build/obj/${f%.cpp}.o" || exit 1
@@ -68,49 +56,40 @@ fi
 SIZE=$(du -h build/subway_tool | cut -f1)
 echo "Built: build/subway_tool ($SIZE)"
 
-# Create self-extracting .sh
-cat > release/subway_tool.sh << 'HEADER'
+# Create wrapper .sh (expects binary in same dir)
+cat > release/subway_tool.sh << 'EOF'
 #!/system/bin/sh
-# ============================================
 # 🎮 Panxcz Subway Surfers Tool v2.1
 # By Panxcz & Freebuff
-# Copyright (c) 2025
-# ============================================
-# Interactive ImGui overlay menu
-# 3-finger tap = toggle menu
-# ============================================
+# 3-finger tap = toggle overlay menu
 
 BASEDIR=$(cd "$(dirname "$0")" && pwd)
-BIN="$BASEDIR/.panxcz_subway"
+BIN="$BASEDIR/subway_tool"
 
-# Extract
-if [ ! -f "$BIN" ] || [ "$(head -c 4 "$BIN" 2>/dev/null)" = "#!/b" ]; then
-    echo "[*] Extracting Panxcz Subway Tool..."
-    sed -n '/^__BIN_BELOW__$/,$ p' "$0" | tail -n +2 > "$BIN"
-    chmod 777 "$BIN"
+if [ ! -f "$BIN" ]; then
+    echo "[!] Binary not found: $BIN"
+    echo "[!] Download subway_tool binary first"
+    exit 1
 fi
 
-# Root check
 if [ "$(id -u)" != "0" ]; then
     echo "[!] Need root: su -c sh $0"
     exit 1
 fi
 
-echo "[*] Starting Panxcz Subway Tool..."
-echo "[*] 3-finger tap = toggle overlay menu"
+chmod 777 "$BIN"
+echo "[*] Starting Panxcz Subway Tool v2.1..."
+echo "[*] 3-finger tap = toggle overlay"
 exec "$BIN" "$@"
+EOF
 
-__BIN_BELOW__
-HEADER
-
-base64 build/subway_tool >> release/subway_tool.sh
 chmod +x release/subway_tool.sh
 
-FINAL=$(du -h release/subway_tool.sh | cut -f1)
 echo ""
 echo "=== Build Complete ==="
-echo "Output: release/subway_tool.sh ($FINAL)"
+echo "Binary:  build/subway_tool ($SIZE)"
+echo "Wrapper: release/subway_tool.sh"
 echo ""
 echo "Test:"
-echo "  adb push release/subway_tool.sh /data/local/tmp/"
+echo "  adb push build/subway_tool release/subway_tool.sh /data/local/tmp/"
 echo "  adb shell su -c sh /data/local/tmp/subway_tool.sh"
