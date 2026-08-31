@@ -1,0 +1,43 @@
+# Panxcz Subway Surfers Tool - Build Workflow
+# Runs on GitHub Actions with NDK
+name: Build subway_tool
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - 'build.sh'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26b
+
+      - name: Build
+        env:
+          NDK_CC: ${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android33-clang
+        run: |
+          chmod +x build.sh
+          bash build.sh
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: subway_tool
+          path: |
+            release/subway_tool
+            release/subway_tool.sh
+            release/README.md
+          retention-days: 90
