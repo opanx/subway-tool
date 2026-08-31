@@ -300,15 +300,7 @@ void Layout_tick_UI() {
 
     ImGui::End();
 
-    /* Re-find CRM periodically */
-    if (!g_GameData.isActive) {
-        static int wait = 0;
-        if (++wait > 300) {
-            wait = 0;
-            uintptr_t c = FindCRM();
-            if (c) g_CRM = c;
-        }
-    }
+    /* CRM re-scan handled by background thread */
 }
 
 /* ============================================================
@@ -353,9 +345,24 @@ int main(int argc, char *argv[]) {
 
     ImGui::GetStyle().WindowRounding = 25.0f;
 
-    g_CRM = FindCRM();
-    if (g_CRM) printf("[+] CRM found @ 0x%lx\n", g_CRM);
-    else printf("[!] Start a run in-game first\n");
+    /* CRM scan runs in background thread */
+    pthread_t crmThread;
+    pthread_create(&crmThread, NULL, [](void*)->void* {
+        printf("[*] CRM scanner started\n");
+        while (main_thread_flag) {
+            if (!g_CRM) {
+                uintptr_t c = FindCRM();
+                if (c) {
+                    g_CRM = c;
+                    printf("[+] CRM found @ 0x%lx\n", c);
+                } else {
+                    printf("[!] CRM not found - start a run\n");
+                }
+            }
+            sleep(3);
+        }
+        return NULL;
+    }, NULL);
 
     printf("[+] Main loop started\n\n");
 
