@@ -32,9 +32,7 @@ $CC \
     -Wall -Wextra -Wno-unused-parameter \
     -D_GNU_SOURCE \
     -o build/subway_tool \
-    src/subway_cheat.c \
-    -lpthread \
-    -static
+    src/subway_cheat.c
 
 chmod +x build/subway_tool
 

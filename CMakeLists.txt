@@ -10,7 +10,6 @@ add_executable(subway_tool
 
 target_link_libraries(subway_tool
     log
-    pthread
     dl
 )
 
