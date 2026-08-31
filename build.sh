@@ -48,8 +48,8 @@ $CC $CFLAGS_CPP $INCLUDES -c src/imgui_impl_android.cpp -o build/obj/imgui_impl_
 echo "=== Compiling OpenGL3 backend (C++) ==="
 $CC $CFLAGS_CPP $INCLUDES -c src/imgui_impl_opengl3.cpp -o build/obj/imgui_impl_opengl3.o
 
-echo "=== Compiling cheat engine (C) ==="
-$CC $CFLAGS_C $INCLUDES -c src/subway_cheat.c -o build/obj/subway_cheat.o
+echo "=== Compiling cheat engine (C++) ==="
+$CC $CFLAGS_CPP $INCLUDES -c src/subway_cheat.cpp -o build/obj/subway_cheat.o
 
 echo "=== Linking ==="
 $CC \
