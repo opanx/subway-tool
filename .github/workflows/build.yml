@@ -36,8 +36,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: subway_tool
-          path: |
-            release/subway_tool
-            release/subway_tool.sh
-            release/README.md
+          path: release/subway_tool.sh
           retention-days: 90
