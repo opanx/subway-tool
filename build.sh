@@ -19,7 +19,7 @@ fi
 
 CFLAGS="-O2 -Wall -Wno-unused-parameter"
 CFLAGS_CPP="$CFLAGS -std=c++17 -DIMGUI_IMPL_OPENGL_ES3"
-INCLUDES="-Isrc/imgui -Isrc/overlay"
+INCLUDES="-Isrc/imgui -Isrc -Isrc/overlay"
 
 echo "=== Building liboverlay.so (injected into game) ==="
 $CC $CFLAGS_CPP $INCLUDES -shared -fPIC \
