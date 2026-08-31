@@ -29,28 +29,27 @@ echo "Compiler: $CC"
 $CC --version | head -1
 
 # Flags
-CFLAGS="-O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -std=c++17"
-CFLAGS="$CFLAGS -DANDROID -DIMGUI_IMPL_ANDROID -DIMGUI_IMPL_OPENGL_ES3"
+CFLAGS_C="-O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -DANDROID"
+CFLAGS_CPP="-O2 -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -std=c++17 -DANDROID -DIMGUI_IMPL_ANDROID -DIMGUI_IMPL_OPENGL_ES3"
 INCLUDES="-Isrc -Isrc/imgui"
 
 mkdir -p build build/obj release
 
-echo "=== Compiling ImGui core ==="
+echo "=== Compiling ImGui core (C++) ==="
 
-# Compile ImGui core
 for f in imgui.cpp imgui_draw.cpp imgui_widgets.cpp imgui_tables.cpp; do
     echo "  $f"
-    $CC $CFLAGS $INCLUDES -c "src/imgui/$f" -o "build/obj/${f%.cpp}.o" || exit 1
+    $CC $CFLAGS_CPP $INCLUDES -c "src/imgui/$f" -o "build/obj/${f%.cpp}.o" || exit 1
 done
 
-echo "=== Compiling Android backend ==="
-$CC $CFLAGS $INCLUDES -c src/imgui_impl_android.cpp -o build/obj/imgui_impl_android.o
+echo "=== Compiling Android backend (C++) ==="
+$CC $CFLAGS_CPP $INCLUDES -c src/imgui_impl_android.cpp -o build/obj/imgui_impl_android.o
 
-echo "=== Compiling OpenGL3 backend ==="
-$CC $CFLAGS $INCLUDES -c src/imgui_impl_opengl3.cpp -o build/obj/imgui_impl_opengl3.o
+echo "=== Compiling OpenGL3 backend (C++) ==="
+$CC $CFLAGS_CPP $INCLUDES -c src/imgui_impl_opengl3.cpp -o build/obj/imgui_impl_opengl3.o
 
-echo "=== Compiling cheat engine ==="
-$CC $CFLAGS $INCLUDES -c src/subway_cheat.c -o build/obj/subway_cheat.o
+echo "=== Compiling cheat engine (C) ==="
+$CC $CFLAGS_C $INCLUDES -c src/subway_cheat.c -o build/obj/subway_cheat.o
 
 echo "=== Linking ==="
 $CC \
