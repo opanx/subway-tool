@@ -55,6 +55,7 @@ echo "=== Linking ==="
 $CC \
     build/obj/*.o \
     -lEGL -lGLESv3 -llog -landroid -ldl \
+    -lc++ \
     -o build/subway_tool
 
 chmod +x build/subway_tool
