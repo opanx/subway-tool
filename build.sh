@@ -30,9 +30,10 @@ echo "=== Building subway_tool ==="
 $CC \
     -O2 \
     -Wall -Wextra -Wno-unused-parameter \
+    -D_GNU_SOURCE \
     -o build/subway_tool \
     src/subway_cheat.c \
-    -llog -lpthread -ldl \
+    -lpthread \
     -static
 
 chmod +x build/subway_tool
