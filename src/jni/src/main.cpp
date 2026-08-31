@@ -17,6 +17,7 @@
 #include <dirent.h>
 #include <pthread.h>
 #include <sys/system_properties.h>
+#include <sstream>
 
 #include "Memory/Memory.h"
 #include "Memory/PatternScanner.h"
@@ -207,7 +208,7 @@ static void ApplyCheats() {
  * ============================================================ */
 static bool menuVisible = true;
 
-static void Layout_tick_UI() {
+void Layout_tick_UI() {
     ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize;
     ImGui::SetNextWindowSizeConstraints(ImVec2(350, 0), ImVec2(400, FLT_MAX));
 
@@ -321,7 +322,7 @@ int main(int argc, char *argv[]) {
     printf("  ========================================\n\n");
 
     printf("[*] Searching for com.kiloo.subwaysurf...\n");
-    g_pid = pidof("com.kiloo.subwaysurf");
+    g_pid = FindPid("com.kiloo.subwaysurf");
     if (g_pid <= 0) {
         printf("[-] Game not found!\n");
         return 1;
