@@ -35,6 +35,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <sys/wait.h>
+#include <sys/ptrace.h>
 
 /* ============================================================
  * ANSI COLORS
@@ -642,7 +643,7 @@ static void cheat_powerups(int pid) {
     if (!fp) return;
 
     char line[512];
-    int activated = 0;
+    (void)0; /* suppress unused warning */
 
     while (fgets(line, sizeof(line), fp)) {
         unsigned long start, end;
