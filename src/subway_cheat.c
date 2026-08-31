@@ -643,7 +643,7 @@ static void cheat_powerups(int pid) {
     if (!fp) return;
 
     char line[512];
-    (void)0; /* suppress unused warning */
+    int activated = 0;
 
     while (fgets(line, sizeof(line), fp)) {
         unsigned long start, end;
@@ -692,6 +692,8 @@ static void cheat_powerups(int pid) {
         free(buf);
     }
     fclose(fp);
+    if (activated > 0)
+        printf(C_GREEN "    [+] Power-ups activated: %d\n" C_RESET, activated);
 }
 
 /* ============================================================
